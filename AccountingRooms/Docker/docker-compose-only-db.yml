@@ -1,0 +1,24 @@
+version: '3.4'
+
+networks:
+  university-accounting-project:
+    driver: bridge
+
+services:
+  accounting-rooms-db:
+    image: postgres:latest
+    container_name: accounting-rooms-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=accounting_rooms_db
+    ports:
+      - "5443:5433"
+    restart: always
+    volumes:
+      - accounting-rooms-data:/var/lib/postgresql/data
+    networks:
+      - university-accounting-project
+    
+volumes:
+  accounting-rooms-data:
