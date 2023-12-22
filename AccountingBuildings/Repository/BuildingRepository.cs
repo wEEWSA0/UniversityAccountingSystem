@@ -38,6 +38,21 @@ public class BuildingRepository
         return _dbContext.Buildings.AsNoTracking().OrderBy(o => o.Id).Take(limit).ToList();
     }
 
+    public List<Building> GetBuildingsByName(string name)
+    {
+        return _dbContext.Buildings.AsNoTracking()
+            .Where(b => b.Name.Contains(name))
+            .ToList();
+    }
+
+    public List<Building> GetBuildingsByNameWithLimit(string name, int limit)
+    {
+        return _dbContext.Buildings.AsNoTracking()
+            .Where(b => b.Name.Contains(name))
+            .OrderBy(o => o.Id)
+            .Take(limit).ToList();
+    }
+
     public void AddNewBuilding(Building building)
     {
         _dbContext.Buildings.Add(building);

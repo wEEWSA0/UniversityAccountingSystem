@@ -1,6 +1,8 @@
 using AccountingRooms.Data;
 using AccountingRooms.Repository;
 
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var defaultConnection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
@@ -20,10 +22,18 @@ services.AddScoped<RoomRepository>();
 
 var app = builder.Build();
 
-//if (!app.Environment.IsDevelopment())
-//{
-//    app.UseHsts();
-//}
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider
+        .GetRequiredService<ApplicationDbContext>();
+
+    dbContext.Database.Migrate();
+}
 
 app.UseSwagger();
 app.UseSwaggerUI(o => 
@@ -31,8 +41,6 @@ app.UseSwaggerUI(o =>
     o.SwaggerEndpoint("/swagger/v1/swagger.json", "Api v1");
     o.RoutePrefix = "";
 });
-
-Console.WriteLine("Ia wrode rabotau");
 
 //app.UseHttpsRedirection();
 

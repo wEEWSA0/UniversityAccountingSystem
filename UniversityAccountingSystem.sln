@@ -5,7 +5,12 @@ VisualStudioVersion = 17.7.34009.444
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AccountingBuildings", "AccountingBuildings\AccountingBuildings.csproj", "{7355A4EC-2B8F-4BC5-9C69-4057FC2E614C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccountingRooms", "AccountingRooms\AccountingRooms.csproj", "{37C214FF-5797-4342-86EC-071086558796}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AccountingRooms", "AccountingRooms\AccountingRooms.csproj", "{37C214FF-5797-4342-86EC-071086558796}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{F0D2F328-ECE7-47FD-AF59-8980AC820D6B}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

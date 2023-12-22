@@ -1,8 +1,11 @@
 ﻿using AccountingBuildings.Dto;
 using AccountingBuildings.Model;
+using AccountingBuildings.RabbitMQ;
 using AccountingBuildings.Repository;
 
 using Microsoft.AspNetCore.Mvc;
+
+using System.Collections.Generic;
 
 namespace AccountingBuildings.Controller;
 
@@ -11,10 +14,12 @@ namespace AccountingBuildings.Controller;
 public class BuildingController : ControllerBase
 {
     private BuildingRepository _buildingRepository;
+    private IRabbitMQService _rabbitMQService;
 
-    public BuildingController(BuildingRepository buildingRepository)
+    public BuildingController(BuildingRepository buildingRepository, IRabbitMQService rabbitMQService)
     {
         _buildingRepository = buildingRepository;
+        _rabbitMQService = rabbitMQService;
     }
 
     [HttpGet("get/{id:long}")]
@@ -30,6 +35,12 @@ public class BuildingController : ControllerBase
         {
             return BadRequest("Not found");
         }
+    }
+
+    [HttpGet("get-by-name/{name:string}")]
+    public IActionResult GetBuildingsByName(string name)
+    {
+        return Ok(_buildingRepository.GetBuildingsByName(name));
     }
 
     [HttpGet("get-all-with-limit/{limit:int}")]
@@ -54,6 +65,8 @@ public class BuildingController : ControllerBase
 
         _buildingRepository.AddNewBuilding(building);
 
+        _rabbitMQService.SendMessage("Added new entity with id: " + building.Id);
+
         return StatusCode(201);
     }
 
@@ -67,6 +80,8 @@ public class BuildingController : ControllerBase
 
         _buildingRepository.UpdateBuilding(building);
 
+        _rabbitMQService.SendMessage(building);
+
         return Ok();
     }
 
@@ -79,6 +94,8 @@ public class BuildingController : ControllerBase
         }
 
         _buildingRepository.RemoveBuilding(building);
+
+        _rabbitMQService.SendMessage("Removed entity with id: " + building.Id);
 
         return Ok();
     }

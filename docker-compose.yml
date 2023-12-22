@@ -1,0 +1,88 @@
+version: '3.4'
+
+networks:
+  university-accounting-project:
+    driver: bridge
+
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    hostname: rabbitmq
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=pass
+    ports:
+      - 15672:15672
+      - 5672:5672
+    volumes:
+      - ./rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - university-accounting-project
+
+
+  accounting-rooms-app:
+    image: docker.io/library/accounting-rooms-app
+    depends_on:
+      - "accounting-rooms-db"
+    container_name: accounting-rooms-app
+    ports:
+      - "5000:80"
+    environment:
+      - ConnectionStrings__DefaultConnection=User ID=postgres;Password=postgres;Server=accounting-rooms-db;Port=5432;Database=accounting_rooms_db; IntegratedSecurity=true;Pooling=true;
+    build: 
+      context: ./AccountingRooms/
+      dockerfile: Dockerfile
+    networks:
+      - university-accounting-project
+
+  accounting-rooms-db:
+    image: postgres:latest
+    container_name: accounting-rooms-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=accounting_rooms_db
+    ports:
+      - "5443:5432"
+    restart: always
+    volumes:
+      - accounting-rooms-data:/var/lib/postgresql/data
+    networks:
+      - university-accounting-project
+
+
+  accounting-buildings-app:
+    image: docker.io/library/accounting-buildings-app
+    depends_on:
+      - "accounting-buildings-db"
+    container_name: accounting-buildings-app
+    ports:
+      - "5001:81"
+    environment:
+      - ConnectionStrings__DefaultConnection=User ID=postgres;Password=postgres;Server=accounting-buildings-db;Port=5432;Database=accounting_buildings_db; IntegratedSecurity=true;Pooling=true;
+    build: 
+      context: ./AccountingBuildings/
+      dockerfile: Dockerfile
+    networks:
+      - university-accounting-project
+
+  accounting-buildings-db:
+    image: postgres:latest
+    container_name: accounting-buildings-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=accounting_buildings_db
+    ports:
+      - "5433:5432"
+    restart: always
+    volumes:
+      - accounting-buildings-data:/var/lib/postgresql/data
+    networks:
+      - university-accounting-project
+    
+volumes:
+  accounting-rooms-data:
+  accounting-buildings-data:
+  rabbitmq-data:
