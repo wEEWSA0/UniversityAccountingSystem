@@ -12,9 +12,9 @@ public class RoomController : ControllerBase
 {
     private RoomRepository _roomRepository;
 
-    public RoomController(RoomRepository buildingRepository)
+    public RoomController(RoomRepository roomRepository)
     {
-        _roomRepository = buildingRepository;
+        _roomRepository = roomRepository;
     }
 
     [HttpGet("get/{id:long}")]
@@ -32,6 +32,7 @@ public class RoomController : ControllerBase
         }
     }
 
+
     [HttpGet("get-all-with-limit/{limit:int}")]
     public IActionResult GetRoomsWithLimit(int limit)
     {
@@ -43,10 +44,18 @@ public class RoomController : ControllerBase
         return Ok(_roomRepository.GetRoomsWithLimit(limit));
     }
 
+
+    [HttpGet("get-by-name/{name}")]
+    public IActionResult GetRoomsByName(string name)
+    {
+        return Ok(_roomRepository.GetRoomsByName(name));
+    }
+
+
     [HttpPost("add-new")]
     public IActionResult AddNewRoom([FromBody] RoomDto roomDto)
     {
-        var building = new Room
+        var room = new Room
         {
             Name = roomDto.Name,
             BuildingId = roomDto.BuildingId,
@@ -56,7 +65,33 @@ public class RoomController : ControllerBase
             RoomType = roomDto.RoomType
         };
 
-        _roomRepository.AddNewRoom(building);
+        _roomRepository.AddNewRoom(room);
+
+        return StatusCode(201);
+    }
+
+
+    [HttpPost("add-new-range")]
+    public IActionResult AddNewRoom([FromBody] RoomDto[] roomsDto)
+    {
+        List<Room> rooms = new();
+
+        foreach (RoomDto roomDto in roomsDto)
+        {
+            var room = new Room
+            {
+                Name = roomDto.Name,
+                BuildingId = roomDto.BuildingId,
+                Capacity = roomDto.Capacity,
+                Floor = roomDto.Floor,
+                Number = roomDto.Number,
+                RoomType = roomDto.RoomType
+            };
+            Console.WriteLine(room);
+            rooms.Add(room);
+        }
+
+        _roomRepository.AddNewRooms(rooms.ToArray());
 
         return StatusCode(201);
     }
@@ -64,12 +99,18 @@ public class RoomController : ControllerBase
     [HttpPost("update")]
     public IActionResult UpdateRoom([FromBody] Room room)
     {
-        if (!_roomRepository.IsExistRoom(room.Id))
+        if (!_roomRepository.TryUpdateRoom(room))
         {
             return BadRequest();
         }
 
-        _roomRepository.UpdateRoom(room);
+        return Ok();
+    }
+
+    [HttpPost("update-range")]
+    public IActionResult UpdateRooms([FromBody] Room[] rooms)
+    {
+        _roomRepository.UpdateExistsRooms(rooms);
 
         return Ok();
     }
@@ -77,12 +118,18 @@ public class RoomController : ControllerBase
     [HttpPost("remove")]
     public IActionResult RemoveRoom([FromBody] Room room)
     {
-        if (!_roomRepository.IsExistRoom(room.Id))
+        if (!_roomRepository.TryRemoveRoom(room))
         {
             return BadRequest();
         }
 
-        _roomRepository.RemoveRoom(room);
+        return Ok();
+    }
+
+    [HttpPost("remove-range")]
+    public IActionResult RemoveRooms([FromBody] Room[] rooms)
+    {
+        _roomRepository.RemoveExistsRooms(rooms);
 
         return Ok();
     }

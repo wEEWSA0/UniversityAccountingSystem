@@ -1,4 +1,5 @@
 using AccountingRooms.Data;
+using AccountingRooms.RabbitMQ;
 using AccountingRooms.Repository;
 
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,10 @@ services.AddNpgsql<ApplicationDbContext>(connectionString);
 services.AddEndpointsApiExplorer();
 services.AddSwaggerGen();
 
+services.AddHostedService<RabbitMqListener>();
+services.AddScoped<RabbitMQHandler>();
 services.AddScoped<RoomRepository>();
+services.AddScoped<BuildingRepository>();
 
 var app = builder.Build();
 
@@ -42,9 +46,24 @@ app.UseSwaggerUI(o =>
     o.RoutePrefix = "";
 });
 
+app.UseCors(x => x
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+
 //app.UseHttpsRedirection();
 
 app.UseRouting();
 app.MapControllers();
 
 app.Run();
+
+
+/// Ctrl+C BuildingController Methods
+/// Test it
+/// Change e.delete to field IsActive = false
+/// Add Rabbit mq:
+/// 1. Send data
+/// 2. Recive data
+/// 3. Actions on recive
+/// 4. Implement additional table to RoomDb "Building" which added values by rabbit mq

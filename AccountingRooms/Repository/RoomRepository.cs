@@ -27,15 +27,24 @@ public class RoomRepository
         return room != null;
     }
 
-    // Только для работы внутри сервисов данной программы
-    public Room GetRoomOrThrow(long id)
-    {
-        return _dbContext.Rooms.Where(b => b.Id == id).SingleOrDefault()!;
-    }
-
     public List<Room> GetRoomsWithLimit(int limit)
     {
         return _dbContext.Rooms.AsNoTracking().OrderBy(o => o.Id).Take(limit).ToList();
+    }
+
+    public List<Room> GetRoomsByName(string name)
+    {
+        return _dbContext.Rooms.AsNoTracking()
+            .Where(b => b.Name.Contains(name))
+            .ToList();
+    }
+
+    public List<Room> GetRoomsByNameWithLimit(string name, int limit)
+    {
+        return _dbContext.Rooms.AsNoTracking()
+            .Where(b => b.Name.Contains(name))
+            .OrderBy(o => o.Id)
+            .Take(limit).ToList();
     }
 
     public void AddNewRoom(Room room)
@@ -44,15 +53,61 @@ public class RoomRepository
         _dbContext.SaveChanges();
     }
 
-    public void UpdateRoom(Room room)
+    public void AddNewRooms(Room[] rooms)
     {
-        _dbContext.Rooms.Update(room);
+        _dbContext.Rooms.AddRange(rooms);
         _dbContext.SaveChanges();
     }
 
-    public void RemoveRoom(Room room)
+    public bool TryUpdateRoom(Room room)
+    {
+        if (IsExistRoom(room.Id))
+        {
+            return false;
+        }
+
+        _dbContext.Rooms.Update(room);
+        _dbContext.SaveChanges();
+
+        return true;
+    }
+
+    public void UpdateExistsRooms(Room[] rooms)
+    {
+        var roomsFound = _dbContext.Rooms
+            .Where(b => rooms.Contains(b))
+            .ToList();
+
+        _dbContext.Rooms.UpdateRange(roomsFound);
+        _dbContext.SaveChanges();
+    }
+
+    public void RemoveRoomOrThrow(Room room)
     {
         _dbContext.Rooms.Remove(room);
+        _dbContext.SaveChanges();
+    }
+
+    public bool TryRemoveRoom(Room room)
+    {
+        if (IsExistRoom(room.Id))
+        {
+            return false;
+        }
+
+        _dbContext.Rooms.Remove(room);
+        _dbContext.SaveChanges();
+
+        return true;
+    }
+
+    public void RemoveExistsRooms(Room[] rooms)
+    {
+        var RoomsFound = _dbContext.Rooms
+            .Where(b => rooms.Contains(b))
+            .ToList();
+
+        _dbContext.Rooms.RemoveRange(RoomsFound);
         _dbContext.SaveChanges();
     }
 }

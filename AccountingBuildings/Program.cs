@@ -46,9 +46,26 @@ app.UseSwaggerUI(o =>
     o.RoutePrefix = "";
 });
 
+app.UseCors(x => x
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+
 //app.UseHttpsRedirection();
 
 app.UseRouting();
 app.MapControllers();
 
 app.Run();
+
+// ¬опросы
+///1. Send only Id(s) or Entity(s) to api
+///2. Compare with database Id(s) or full Entity(s). Entity can be changed before Remove api request recived
+///TODO ѕроверить: 
+///создать сущность
+///составить запрос на удаление, но не отправл€ть
+///изменить сущность
+///попробовать удалить со старыми данными
+
+
+// todo взвесить утром где использовать id, а где entity (28.12)

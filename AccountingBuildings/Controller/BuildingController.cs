@@ -37,11 +37,13 @@ public class BuildingController : ControllerBase
         }
     }
 
-    [HttpGet("get-by-name/{name:string}")]
+
+    [HttpGet("get-by-name/{name}")]
     public IActionResult GetBuildingsByName(string name)
     {
         return Ok(_buildingRepository.GetBuildingsByName(name));
     }
+
 
     [HttpGet("get-all-with-limit/{limit:int}")]
     public IActionResult GetBuildingsWithLimit(int limit)
@@ -54,6 +56,7 @@ public class BuildingController : ControllerBase
         return Ok(_buildingRepository.GetBuildingsWithLimit(limit));
     }
 
+
     [HttpPost("add-new")]
     public IActionResult AddNewBuilding([FromBody] BuildingDto buildingDto)
     {
@@ -65,7 +68,37 @@ public class BuildingController : ControllerBase
 
         _buildingRepository.AddNewBuilding(building);
 
-        _rabbitMQService.SendMessage("Added new entity with id: " + building.Id);
+        RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Create };
+        _rabbitMQService.SendMessage(data);
+
+        return StatusCode(201);
+    }
+
+
+    [HttpPost("add-new-range")]
+    public IActionResult AddNewBuildings([FromBody] BuildingDto[] buildingsDto)
+    {
+        List<Building> buildings = new();
+
+        foreach (BuildingDto buildingDto in buildingsDto)
+        {
+            var building = new Building
+            {
+                Name = buildingDto.Name,
+                Floors = buildingDto.Floors,
+                Address = buildingDto.Address
+            };
+            Console.WriteLine(building);
+            buildings.Add(building);
+        }
+
+        _buildingRepository.AddNewBuildings(buildings.ToArray());
+
+        foreach (Building building in buildings)
+        {
+            RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Create };
+            _rabbitMQService.SendMessage(data);
+        }
 
         return StatusCode(201);
     }
@@ -73,14 +106,27 @@ public class BuildingController : ControllerBase
     [HttpPost("update")]
     public IActionResult UpdateBuilding([FromBody] Building building)
     {
-        if (!_buildingRepository.IsExistBuilding(building.Id))
+        if (!_buildingRepository.TryUpdateBuilding(building))
         {
             return BadRequest();
         }
 
-        _buildingRepository.UpdateBuilding(building);
+        RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Update };
+        _rabbitMQService.SendMessage(data);
 
-        _rabbitMQService.SendMessage(building);
+        return Ok();
+    }
+
+    [HttpPost("update-range")]
+    public IActionResult UpdateBuildings([FromBody] Building[] buildings)
+    {
+        _buildingRepository.UpdateExistsBuildings(buildings);
+
+        foreach (Building building in buildings)
+        {
+            RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Update };
+            _rabbitMQService.SendMessage(data);
+        }
 
         return Ok();
     }
@@ -88,14 +134,27 @@ public class BuildingController : ControllerBase
     [HttpPost("remove")]
     public IActionResult RemoveBuilding([FromBody] Building building)
     {
-        if (!_buildingRepository.IsExistBuilding(building.Id))
+        if (!_buildingRepository.TryRemoveBuilding(building))
         {
             return BadRequest();
         }
 
-        _buildingRepository.RemoveBuilding(building);
+        RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Delete };
+        _rabbitMQService.SendMessage(data);
 
-        _rabbitMQService.SendMessage("Removed entity with id: " + building.Id);
+        return Ok();
+    }
+
+    [HttpPost("remove-range")]
+    public IActionResult RemoveBuildings([FromBody] Building[] buildings)
+    {
+        _buildingRepository.RemoveExistsBuildings(buildings);
+
+        foreach (Building building in buildings)
+        {
+            RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Delete };
+            _rabbitMQService.SendMessage(data);
+        }
 
         return Ok();
     }

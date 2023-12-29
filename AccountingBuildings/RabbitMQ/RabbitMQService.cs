@@ -9,6 +9,9 @@ public class RabbitMQService : IRabbitMQService
 {
     private ConnectionFactory _connection;
 
+    private const string Queue = "BuildingsActionsQueue";
+    private const string Host = "localhost";
+
     //public RabbitMQService(string hostName)   todo implemenat with params in AddScoped<>("", "")
     //{
     //    _connection = new ConnectionFactory { HostName = hostName };
@@ -18,10 +21,10 @@ public class RabbitMQService : IRabbitMQService
     {
         _connection = new ConnectionFactory
         {
-            HostName = "localhost",
+            HostName = Host,
             Port = 5672,
-            UserName = "user",
-            Password = "pass"
+            UserName = "guest",
+            Password = "guest"
         };
     }
 
@@ -30,7 +33,7 @@ public class RabbitMQService : IRabbitMQService
         using (var connection = _connection.CreateConnection())
         using (var channel = connection.CreateModel())
         {
-            channel.QueueDeclare(queue: "MyQueue",
+            channel.QueueDeclare(queue: Queue,
                            durable: false,
                            exclusive: false,
                            autoDelete: false,
@@ -39,7 +42,7 @@ public class RabbitMQService : IRabbitMQService
             var body = Encoding.UTF8.GetBytes(message);
 
             channel.BasicPublish(exchange: "",
-                           routingKey: "MyQueue",
+                           routingKey: Queue,
                            basicProperties: null,
                            body: body);
         }

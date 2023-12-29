@@ -15,5 +15,6 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<Room> Rooms { get; set; }
+    public DbSet<Building> Buildings { get; set; }
 }
 
