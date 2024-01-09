@@ -33,7 +33,7 @@ public class BuildingController : ControllerBase
         }
         else
         {
-            return BadRequest("Not found");
+            return NotFound();
         }
     }
 
@@ -71,7 +71,7 @@ public class BuildingController : ControllerBase
         RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Create };
         _rabbitMQService.SendMessage(data);
 
-        return StatusCode(201);
+        return StatusCode(201, building.Id);
     }
 
 
@@ -88,7 +88,6 @@ public class BuildingController : ControllerBase
                 Floors = buildingDto.Floors,
                 Address = buildingDto.Address
             };
-            Console.WriteLine(building);
             buildings.Add(building);
         }
 
@@ -100,15 +99,18 @@ public class BuildingController : ControllerBase
             _rabbitMQService.SendMessage(data);
         }
 
-        return StatusCode(201);
+        var buildingsIds = buildings.Select(b => b.Id);
+
+        return StatusCode(201, buildingsIds);
     }
+
 
     [HttpPost("update")]
     public IActionResult UpdateBuilding([FromBody] Building building)
     {
         if (!_buildingRepository.TryUpdateBuilding(building))
         {
-            return BadRequest();
+            return NotFound();
         }
 
         RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Update };
@@ -117,10 +119,14 @@ public class BuildingController : ControllerBase
         return Ok();
     }
 
+
     [HttpPost("update-range")]
     public IActionResult UpdateBuildings([FromBody] Building[] buildings)
     {
-        _buildingRepository.UpdateExistsBuildings(buildings);
+        if (!_buildingRepository.TryUpdateBuildings(buildings))
+        {
+            return BadRequest();
+        }
 
         foreach (Building building in buildings)
         {
@@ -131,12 +137,22 @@ public class BuildingController : ControllerBase
         return Ok();
     }
 
+
     [HttpPost("remove")]
-    public IActionResult RemoveBuilding([FromBody] Building building)
+    public IActionResult RemoveBuilding([FromBody] long buildingId)
     {
-        if (!_buildingRepository.TryRemoveBuilding(building))
+        if (!_buildingRepository.TrySetBuildingInactive(buildingId))
         {
-            return BadRequest();
+            return NotFound();
+        }
+
+        var building = _buildingRepository.GetBuildingWithAnyActivity(buildingId);
+
+        if (building is null)
+        {
+            Console.WriteLine("Unexpected value. Building is null");
+
+            return StatusCode(500, "Internal conflict");
         }
 
         RabbitMQData data = new RabbitMQData { Building = building, Action = RabbitMQAction.Delete };
@@ -145,10 +161,20 @@ public class BuildingController : ControllerBase
         return Ok();
     }
 
+
     [HttpPost("remove-range")]
-    public IActionResult RemoveBuildings([FromBody] Building[] buildings)
+    public IActionResult RemoveBuildings([FromBody] long[] buildingsIds)
     {
-        _buildingRepository.RemoveExistsBuildings(buildings);
+        _buildingRepository.SetInactiveExistsBuildings(buildingsIds);
+
+        var buildings = _buildingRepository.GetBuildingsWithAnyActivity(buildingsIds);
+
+        if (!buildings.Any())
+        {
+            Console.WriteLine("Unexpected value. Buildings is empty");
+
+            return StatusCode(500, "Internal conflict");
+        }
 
         foreach (Building building in buildings)
         {

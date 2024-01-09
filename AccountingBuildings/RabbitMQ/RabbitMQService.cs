@@ -1,4 +1,6 @@
-﻿using RabbitMQ.Client;
+﻿using Microsoft.Extensions.Options;
+
+using RabbitMQ.Client;
 
 using System.Text;
 using System.Text.Json;
@@ -9,22 +11,22 @@ public class RabbitMQService : IRabbitMQService
 {
     private ConnectionFactory _connection;
 
-    private const string Queue = "BuildingsActionsQueue";
-    private const string Host = "localhost";
+    private string _queue { get; init; }
 
-    //public RabbitMQService(string hostName)   todo implemenat with params in AddScoped<>("", "")
-    //{
-    //    _connection = new ConnectionFactory { HostName = hostName };
-    //}
-
-    public RabbitMQService()
+    public RabbitMQService(IOptions<RabbitMQOptions> rabbitMQListenerOptions)
     {
-        _connection = new ConnectionFactory
+        var options = rabbitMQListenerOptions.Value!;
+
+        _queue = options.Queue;
+
+        Console.WriteLine(JsonSerializer.Serialize(options));
+
+        _connection = new()
         {
-            HostName = Host,
-            Port = 5672,
-            UserName = "guest",
-            Password = "guest"
+            HostName = options.HostName,
+            Port = options.Port,
+            UserName = options.UserName,
+            Password = options.Password
         };
     }
 
@@ -33,7 +35,7 @@ public class RabbitMQService : IRabbitMQService
         using (var connection = _connection.CreateConnection())
         using (var channel = connection.CreateModel())
         {
-            channel.QueueDeclare(queue: Queue,
+            channel.QueueDeclare(queue: _queue,
                            durable: false,
                            exclusive: false,
                            autoDelete: false,
@@ -42,7 +44,7 @@ public class RabbitMQService : IRabbitMQService
             var body = Encoding.UTF8.GetBytes(message);
 
             channel.BasicPublish(exchange: "",
-                           routingKey: Queue,
+                           routingKey: _queue,
                            basicProperties: null,
                            body: body);
         }
@@ -51,6 +53,9 @@ public class RabbitMQService : IRabbitMQService
     public void SendMessage<T>(T message)
     {
         var messageSerialized = JsonSerializer.Serialize(message);
+
+        Console.WriteLine("Message: " + messageSerialized);
+
         SendMessage(messageSerialized);
     }
 }

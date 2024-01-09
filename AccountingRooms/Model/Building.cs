@@ -8,4 +8,5 @@ public class Building
     public long Id { get; set; }
     public string Name { get; set; } = null!;
     public int Floors { get; set; }
+    public bool IsActive { get; set; } = true;
 }

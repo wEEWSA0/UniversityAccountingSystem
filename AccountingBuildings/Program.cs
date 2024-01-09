@@ -4,40 +4,24 @@ using AccountingBuildings.Repository;
 
 using Microsoft.EntityFrameworkCore;
 
-using System;
-
 var builder = WebApplication.CreateBuilder(args);
-
-var defaultConnection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-
-var connectionString = defaultConnection is null ? builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.") : defaultConnection;
 
 var services = builder.Services;
 
-services.AddControllers();
+ConfigureServices(builder.Configuration);
 
-services.AddNpgsql<ApplicationDbContext>(connectionString);
+services.AddControllers();
 
 services.AddEndpointsApiExplorer();
 services.AddSwaggerGen();
 
 services.AddScoped<BuildingRepository>();
+
 services.AddScoped<IRabbitMQService, RabbitMQService>();
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-}
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider
-        .GetRequiredService<ApplicationDbContext>();
-
-    dbContext.Database.Migrate();
-}
+MigrateDatabase(app.Services);
 
 app.UseSwagger();
 app.UseSwaggerUI(o =>
@@ -51,21 +35,46 @@ app.UseCors(x => x
             .AllowAnyMethod()
             .AllowAnyHeader());
 
-//app.UseHttpsRedirection();
-
 app.UseRouting();
 app.MapControllers();
 
 app.Run();
 
-// ¬опросы
-///1. Send only Id(s) or Entity(s) to api
-///2. Compare with database Id(s) or full Entity(s). Entity can be changed before Remove api request recived
-///TODO ѕроверить: 
-///создать сущность
-///составить запрос на удаление, но не отправл€ть
-///изменить сущность
-///попробовать удалить со старыми данными
+void MigrateDatabase(IServiceProvider serviceProvider)
+{
+    using (var scope = serviceProvider.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider
+            .GetRequiredService<ApplicationDbContext>();
 
+        dbContext.Database.Migrate();
+    }
+}
 
-// todo взвесить утром где использовать id, а где entity (28.12)
+void ConfigureServices(ConfigurationManager configuration)
+{
+    #region ConfigureDatabase
+    var defaultConnection = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+
+    var connectionString = defaultConnection is null ? configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.") : defaultConnection;
+
+    services.AddNpgsql<ApplicationDbContext>(connectionString);
+    #endregion
+
+    #region ConfigureRabbitMQ
+    var rabbitHost = Environment.GetEnvironmentVariable("RabbitMQ__Host");
+    var rabbitPort = Environment.GetEnvironmentVariable("RabbitMQ__Port");
+    var rabbitUserName = Environment.GetEnvironmentVariable("RabbitMQ__UserName");
+    var rabbitPassword = Environment.GetEnvironmentVariable("RabbitMQ__Password");
+    var rabbitQueue = Environment.GetEnvironmentVariable("RabbitMQ__Queue");
+
+    services.Configure<RabbitMQOptions>(options =>
+    {
+        options.HostName = rabbitHost ?? configuration.GetValue<string>("RabbitMQ:Host");
+        options.Port = rabbitPort is null ? configuration.GetValue<int>("RabbitMQ:Port") : int.Parse(rabbitPort!);
+        options.UserName = rabbitUserName ?? configuration.GetValue<string>("RabbitMQ:UserName");
+        options.Password = rabbitPassword ?? configuration.GetValue<string>("RabbitMQ:Password");
+        options.Queue = rabbitQueue ?? configuration.GetValue<string>("RabbitMQ:Queue");
+    });
+    #endregion
+}

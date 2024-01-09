@@ -11,10 +11,12 @@ namespace AccountingRooms.Controller;
 public class RoomController : ControllerBase
 {
     private RoomRepository _roomRepository;
+    private BuildingRepository _buildingRepository;
 
-    public RoomController(RoomRepository roomRepository)
+    public RoomController(RoomRepository roomRepository, BuildingRepository buildingRepository)
     {
         _roomRepository = roomRepository;
+        _buildingRepository = buildingRepository;
     }
 
     [HttpGet("get/{id:long}")]
@@ -28,7 +30,7 @@ public class RoomController : ControllerBase
         }
         else
         {
-            return BadRequest("Not found");
+            return NotFound("Not found");
         }
     }
 
@@ -55,6 +57,11 @@ public class RoomController : ControllerBase
     [HttpPost("add-new")]
     public IActionResult AddNewRoom([FromBody] RoomDto roomDto)
     {
+        if (!_buildingRepository.IsExistBuilding(roomDto.BuildingId))
+        {
+            return NotFound("Building not exists");
+        }
+
         var room = new Room
         {
             Name = roomDto.Name,
@@ -65,15 +72,27 @@ public class RoomController : ControllerBase
             RoomType = roomDto.RoomType
         };
 
-        _roomRepository.AddNewRoom(room);
+        if (!_roomRepository.TryAddNewRoom(room))
+        {
+            return BadRequest("Already exists room by this number and buildingId");
+        }
 
         return StatusCode(201);
     }
 
 
     [HttpPost("add-new-range")]
-    public IActionResult AddNewRoom([FromBody] RoomDto[] roomsDto)
+    public IActionResult AddNewRooms([FromBody] RoomDto[] roomsDto)
     {
+        var roomsIds = roomsDto
+            .Select(r => r.BuildingId)
+            .ToArray();
+
+        if (!_buildingRepository.IsExistsBuildings(roomsIds))
+        {
+            return NotFound("Buildings not exists");
+        }
+
         List<Room> rooms = new();
 
         foreach (RoomDto roomDto in roomsDto)
@@ -87,18 +106,38 @@ public class RoomController : ControllerBase
                 Number = roomDto.Number,
                 RoomType = roomDto.RoomType
             };
-            Console.WriteLine(room);
             rooms.Add(room);
         }
 
-        _roomRepository.AddNewRooms(rooms.ToArray());
+        if (!_roomRepository.TryAddNewRooms(rooms.ToArray()))
+        {
+            return BadRequest();
+        }
 
         return StatusCode(201);
     }
 
+
     [HttpPost("update")]
-    public IActionResult UpdateRoom([FromBody] Room room)
+    public IActionResult UpdateRoom([FromBody] RoomUpdateDto roomDto)
     {
+        if (!_buildingRepository.IsExistBuilding(roomDto.BuildingId))
+        {
+            return NotFound("Building not exists");
+        }
+
+        var room = new Room
+        {
+            Id = roomDto.Id,
+            BuildingId = roomDto.BuildingId,
+            Capacity = roomDto.Capacity,
+            Floor = roomDto.Floor,
+            Number = roomDto.Number,
+            RoomType = roomDto.RoomType,
+            IsActive = roomDto.IsActive,
+            Name = roomDto.Name
+        };
+
         if (!_roomRepository.TryUpdateRoom(room))
         {
             return BadRequest();
@@ -107,18 +146,37 @@ public class RoomController : ControllerBase
         return Ok();
     }
 
+
     [HttpPost("update-range")]
-    public IActionResult UpdateRooms([FromBody] Room[] rooms)
+    public IActionResult UpdateRooms([FromBody] RoomUpdateDto[] roomsDtos)
     {
-        _roomRepository.UpdateExistsRooms(rooms);
+        var roomsIds = roomsDtos
+            .Select(r => r.BuildingId)
+            .ToArray();
 
-        return Ok();
-    }
+        if (!_buildingRepository.IsExistsBuildings(roomsIds))
+        {
+            return NotFound("Buildings not exists");
+        }
 
-    [HttpPost("remove")]
-    public IActionResult RemoveRoom([FromBody] Room room)
-    {
-        if (!_roomRepository.TryRemoveRoom(room))
+        List<Room> rooms = new();
+
+        foreach (var roomDto in roomsDtos)
+        {
+            rooms.Add(new Room
+            {
+                Id = roomDto.Id,
+                BuildingId = roomDto.BuildingId,
+                Capacity = roomDto.Capacity,
+                Floor = roomDto.Floor,
+                Number = roomDto.Number,
+                RoomType = roomDto.RoomType,
+                IsActive = roomDto.IsActive,
+                Name = roomDto.Name
+            });
+        }
+
+        if (!_roomRepository.TryUpdateRooms(rooms.ToArray()))
         {
             return BadRequest();
         }
@@ -126,10 +184,23 @@ public class RoomController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("remove-range")]
-    public IActionResult RemoveRooms([FromBody] Room[] rooms)
+
+    [HttpPost("remove")]
+    public IActionResult RemoveRoom([FromBody] long roomId)
     {
-        _roomRepository.RemoveExistsRooms(rooms);
+        if (!_roomRepository.TrySetRoomInactive(roomId))
+        {
+            return NotFound();
+        }
+
+        return Ok();
+    }
+
+
+    [HttpPost("remove-range")]
+    public IActionResult RemoveRooms([FromBody] long[] roomsIds)
+    {
+        _roomRepository.SetInactiveExistsRooms(roomsIds);
 
         return Ok();
     }

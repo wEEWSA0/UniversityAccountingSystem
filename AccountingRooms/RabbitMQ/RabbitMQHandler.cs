@@ -17,8 +17,6 @@ public class RabbitMQHandler
 
     public void Process(string content)
     {
-        Console.WriteLine("Process in Handler");
-
         RabbitMQData data = JsonConvert.DeserializeObject<RabbitMQData>(content);
 
         Building building = new Building 
@@ -28,27 +26,21 @@ public class RabbitMQHandler
             Name = data.Building.Name,
         };
 
-        Console.WriteLine(data.Action);
-        Console.WriteLine(building);
-
-        if ((int)data.Action == (int)RabbitMQAction.Update)
+        if (data.Action == RabbitMQAction.Update)
         {
             _buildingRepository.TryUpdateBuilding(building);
         }
-        else if ((int)data.Action == (int)RabbitMQAction.Create)
+        else if (data.Action == RabbitMQAction.Create)
         {
             _buildingRepository.AddNewBuilding(building);
-            Console.WriteLine("Created");
         }
-        else if ((int)data.Action == (int)RabbitMQAction.Delete)
+        else if (data.Action == RabbitMQAction.Delete)
         {
-            _buildingRepository.TryRemoveBuilding(building);
+            _buildingRepository.TrySetBuildingInactive(building);
         } 
         else
         {
             throw new NotImplementedException();
         }
-
-        Console.WriteLine("Processed in Handler");
     }
 }

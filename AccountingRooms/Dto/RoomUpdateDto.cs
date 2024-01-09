@@ -1,12 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AccountingRooms.Model;
 
-using System.ComponentModel.DataAnnotations;
+namespace AccountingRooms.Dto;
 
-namespace AccountingRooms.Model;
-
-public class Room
+public class RoomUpdateDto
 {
-    [Key]
     public long Id { get; set; }
     public long BuildingId { get; set; }
     public string Name { get; set; } = null!;
@@ -15,6 +12,4 @@ public class Room
     public short Floor { get; set; }
     public int Number { get; set; }
     public bool IsActive { get; set; } = true;
-
-    public Building Building { get; set; } = null!;
 }
